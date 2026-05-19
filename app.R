@@ -45,18 +45,30 @@ ui <- fluidPage(
         tabPanel(
           "Story",
           br(),
+          wellPanel(
+            h4("Story Path"),
+            tags$ol(
+              tags$li("Define a fair clutch window and show how much data is included each season."),
+              tags$li("Measure whether the average player performs better or worse in Late Tight moments than in baseline situations."),
+              tags$li("Check whether the league's changing 3-point style explains clutch performance."),
+              tags$li("Compare shot selection over time and inspect individual players as supporting evidence.")
+            )
+          ),
           fluidRow(
             column(6, wellPanel(h4("Selected Window"), uiOutput("window_summary"))),
             column(6, wellPanel(h4("Key Takeaway"), uiOutput("takeaway")))
           ),
           uiOutput("load_status"),
           h4("League Clutchness by Season"),
+          tags$p("This first view answers the main question: in each season, was the average player better or worse in late, close-game shots than in their normal baseline shots?"),
           plotlyOutput("plot_efficiency", height = "320px"),
           br(),
           h4("League Clutch Sample Size by Season"),
+          tags$p("This checks whether the clutch window has enough observations to trust each season-level comparison."),
           plotlyOutput("plot_volume", height = "280px"),
           br(),
           h4("League Clutch 3-Point Attempts and Makes"),
+          tags$p("This shows whether the league is taking and making more clutch threes over time."),
           plotlyOutput("plot_three_volume", height = "300px"),
           br(),
           h4("Made Clutch 3s vs. League Clutchness"),
@@ -64,6 +76,7 @@ ui <- fluidPage(
           plotlyOutput("plot_three_correlation", height = "320px"),
           br(),
           h4("Clutch Shot Selection Over Time"),
+          tags$p("This final story chart shows how the mix of twos, threes, and free throws changes inside the clutch window."),
           plotlyOutput("plot_mix", height = "320px")
         ),
         tabPanel(
@@ -405,20 +418,64 @@ server <- function(input, output, session) {
 
     validate(need(nrow(df) >= 2, "Need at least two seasons with data to draw the correlation plot."))
 
-    p <- ggplot(df, aes(x = clutch_3pt_makes, y = avg_player_delta_pp, text = hover)) +
-      geom_hline(yintercept = 0, linetype = "dashed", color = "gray60") +
-      geom_point(size = 3, color = "#2b8cbe", alpha = 0.85) +
-      geom_smooth(method = "lm", se = FALSE, color = "gray25", linewidth = 0.9) +
-      geom_text(aes(label = season), nudge_y = 0.8, size = 3.4, check_overlap = TRUE) +
-      labs(
-        x = "Made Late Tight 3PT shots",
-        y = "Average player clutch delta (pp)"
-      ) +
-      theme_minimal(base_size = 13) +
-      theme(panel.grid.minor = element_blank())
+    model <- lm(avg_player_delta_pp ~ clutch_3pt_makes, data = df)
+    line_df <- tibble(
+      clutch_3pt_makes = seq(min(df$clutch_3pt_makes), max(df$clutch_3pt_makes), length.out = 100)
+    ) %>%
+      mutate(
+        avg_player_delta_pp = predict(model, newdata = .),
+        hover = sprintf(
+          "Fitted correlation line<br>Made Late Tight 3s: %.1f<br>Predicted clutch delta: %+.2f pp",
+          clutch_3pt_makes,
+          avg_player_delta_pp
+        )
+      )
 
-    ggplotly(p, tooltip = "text") %>%
-      layout(hovermode = "closest")
+    zero_line <- list(
+      type = "line",
+      x0 = min(df$clutch_3pt_makes),
+      x1 = max(df$clutch_3pt_makes),
+      y0 = 0,
+      y1 = 0,
+      line = list(color = "gray", dash = "dash")
+    )
+
+    plot_ly() %>%
+      add_lines(
+        data = line_df,
+        x = ~clutch_3pt_makes,
+        y = ~avg_player_delta_pp,
+        text = ~hover,
+        hoverinfo = "text",
+        name = "Fitted correlation line",
+        line = list(color = "#d95f0e", width = 4)
+      ) %>%
+      add_markers(
+        data = df,
+        x = ~clutch_3pt_makes,
+        y = ~avg_player_delta_pp,
+        text = ~hover,
+        hoverinfo = "text",
+        name = "Season",
+        marker = list(color = "#2b8cbe", size = 10, opacity = 0.85)
+      ) %>%
+      add_text(
+        data = df,
+        x = ~clutch_3pt_makes,
+        y = ~avg_player_delta_pp,
+        text = ~season,
+        textposition = "top center",
+        textfont = list(size = 11, color = "gray25"),
+        hoverinfo = "skip",
+        showlegend = FALSE
+      ) %>%
+      layout(
+        hovermode = "closest",
+        shapes = list(zero_line),
+        xaxis = list(title = "Made Late Tight 3PT shots"),
+        yaxis = list(title = "Average player clutch delta (pp)"),
+        legend = list(orientation = "h")
+      )
   })
 
   output$plot_mix <- renderPlotly({
