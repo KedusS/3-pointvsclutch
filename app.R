@@ -18,10 +18,10 @@ ui <- fluidPage(
       sliderInput("season_min", "Start Season", min = 2006, max = latest_wnba_season, value = 2006, step = 1, sep = ""),
       sliderInput("season_max", "End Season",   min = 2006, max = latest_wnba_season, value = default_end_season, step = 1, sep = ""),
       radioButtons("window_mode", "Clutch Window Mode",
-                   choices = c("Q4 + OT last 3:00" = "Q4+OT",
+                   choices = c("Q4 + OT last 5:00" = "Q4+OT",
                                "Endgame last N seconds" = "Endgame"),
                    selected = "Q4+OT"),
-      numericInput("time_cut", "Time cutoff (seconds)", value = 180, min = 30, max = 600, step = 30),
+      numericInput("time_cut", "Time cutoff (seconds)", value = 300, min = 30, max = 600, step = 30),
       numericInput("margin_cut", "Margin cutoff (<= points)", value = 5, min = 1, max = 20, step = 1),
       checkboxInput("fg_only", "Field Goals Only (exclude FTs)", value = FALSE),
       numericInput("min_attempts", "Minimum Late_Tight attempts", value = 0, min = 0, max = 50, step = 1),
@@ -202,7 +202,7 @@ server <- function(input, output, session) {
     req(p)
     tags$ul(
       tags$li(sprintf("Seasons: %s", paste(range(p$seasons), collapse = "-"))),
-      tags$li(sprintf("Time cutoff: last %s seconds", p$time_cut_s)),
+      tags$li(sprintf("Time cutoff: last %s seconds (%s minutes)", p$time_cut_s, round(p$time_cut_s / 60, 1))),
       tags$li(sprintf("Score margin: %s points or fewer", p$margin_cut)),
       tags$li(sprintf("Window mode: %s", p$window_mode)),
       tags$li(if (p$fg_only) "Field goals only" else "Field goals and free throws")

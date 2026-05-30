@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Clutch Question — WNBA 2006–2025</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Source+Serif+4:ital,wght@0,300;0,400;1,300&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink: #1a1a1a;
+    --mid: #555;
+    --faint: #999;
+    --line: #e0e0e0;
+    --accent: #c0392b;
+    --accent2: #2980b9;
+    --accent3: #27ae60;
+    --bg: #ffffff;
+    --rule: #1a1a1a;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-weight: 300;
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 17px;
+    line-height: 1.7;
+  }
+
+  /* ── HEADER ───────────────────────────────────────────── */
+  header {
+    max-width: 680px;
+    margin: 80px auto 0;
+    padding: 0 24px;
+    border-top: 3px solid var(--rule);
+    padding-top: 32px;
+  }
+
+  .eyebrow {
+    font-family: 'Source Serif 4', serif;
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--faint);
+    margin-bottom: 16px;
+  }
+
+  h1 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(32px, 6vw, 52px);
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--ink);
+    margin-bottom: 20px;
+  }
+
+  .deck {
+    font-size: 19px;
+    line-height: 1.6;
+    color: var(--mid);
+    margin-bottom: 32px;
+    font-weight: 300;
+    font-style: italic;
+  }
+
+  .byline {
+    font-size: 12px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--faint);
+    border-top: 1px solid var(--line);
+    padding-top: 16px;
+  }
+
+  /* ── SECTIONS ─────────────────────────────────────────── */
+  .section {
+    max-width: 680px;
+    margin: 64px auto 0;
+    padding: 0 24px;
+  }
+
+  .section h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 26px;
+    font-weight: 700;
+    margin-bottom: 14px;
+    color: var(--ink);
+  }
+
+  .section p {
+    margin-bottom: 16px;
+    color: #333;
+  }
+
+  .section p:last-child { margin-bottom: 0; }
+
+  .callout {
+    border-left: 3px solid var(--accent);
+    padding: 12px 20px;
+    margin: 24px 0;
+    background: #fafafa;
+  }
+
+  .callout p {
+    margin: 0;
+    font-style: italic;
+    font-size: 16px;
+    color: var(--mid);
+  }
+
+  /* ── CHART WRAPPERS ───────────────────────────────────── */
+  .chart-wrap {
+    max-width: 800px;
+    margin: 48px auto 0;
+    padding: 0 24px;
+  }
+
+  .chart-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: var(--ink);
+  }
+
+  .chart-sub {
+    font-size: 13px;
+    color: var(--faint);
+    margin-bottom: 16px;
+    font-family: 'Source Serif 4', serif;
+    font-weight: 300;
+  }
+
+  svg { display: block; width: 100%; overflow: visible; }
+
+  .axis line, .axis path { stroke: var(--line); }
+  .axis text {
+    font-family: 'Source Serif 4', serif;
+    font-size: 11px;
+    fill: var(--faint);
+  }
+
+  .zero-line { stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: none; }
+  .ref-line  { stroke: var(--line); stroke-width: 1; }
+
+  /* ── TOOLTIP ──────────────────────────────────────────── */
+  #tooltip {
+    position: fixed;
+    background: var(--ink);
+    color: #fff;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-family: 'Source Serif 4', serif;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .15s;
+    z-index: 100;
+    max-width: 200px;
+    line-height: 1.5;
+  }
+
+  /* ── LEGEND ───────────────────────────────────────────── */
+  .legend {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    color: var(--mid);
+    font-family: 'Source Serif 4', serif;
+  }
+
+  .legend-swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  /* ── SCATTER CONTROLS ────────────────────────────────── */
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+
+  .ctrl-btn {
+    font-family: 'Source Serif 4', serif;
+    font-size: 12px;
+    padding: 5px 14px;
+    border: 1px solid var(--ink);
+    background: transparent;
+    cursor: pointer;
+    color: var(--ink);
+    letter-spacing: .04em;
+    transition: background .15s, color .15s;
+  }
+
+  .ctrl-btn.active, .ctrl-btn:hover {
+    background: var(--ink);
+    color: #fff;
+  }
+
+  /* ── PLAYER TABLE ────────────────────────────────────── */
+  .player-table-wrap {
+    max-width: 800px;
+    margin: 48px auto 0;
+    padding: 0 24px;
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    font-family: 'Source Serif 4', serif;
+  }
+
+  thead th {
+    text-align: left;
+    padding: 8px 12px;
+    font-weight: 400;
+    font-size: 11px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--faint);
+    border-bottom: 2px solid var(--rule);
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  thead th:hover { color: var(--ink); }
+  thead th .sort-arrow { margin-left: 4px; }
+
+  tbody tr {
+    border-bottom: 1px solid var(--line);
+    transition: background .1s;
+  }
+
+  tbody tr:hover { background: #f9f9f9; }
+
+  tbody td {
+    padding: 9px 12px;
+    color: #333;
+  }
+
+  .label-badge {
+    display: inline-block;
+    padding: 1px 8px;
+    font-size: 11px;
+    border-radius: 2px;
+    letter-spacing: .04em;
+  }
+
+  .label-Clutch       { background: #eafaf1; color: #27ae60; }
+  .label-Anti-clutch  { background: #fdf2f2; color: #c0392b; }
+  .label-Steady       { background: #f5f5f5; color: #888; }
+
+  /* ── FILTER BAR ──────────────────────────────────────── */
+  .filter-bar {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 13px;
+    color: var(--mid);
+  }
+
+  .filter-bar input {
+    font-family: 'Source Serif 4', serif;
+    font-size: 13px;
+    padding: 5px 10px;
+    border: 1px solid var(--line);
+    outline: none;
+    width: 200px;
+  }
+
+  .filter-bar input:focus { border-color: var(--ink); }
+
+  /* ── FOOTER ──────────────────────────────────────────── */
+  footer {
+    max-width: 680px;
+    margin: 80px auto 60px;
+    padding: 24px 24px 0;
+    border-top: 1px solid var(--line);
+    font-size: 12px;
+    color: var(--faint);
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+
+<div id="tooltip"></div>
+
+<!-- ── HEADER ──────────────────────────────────────────────────── -->
+<header>
+  <div class="eyebrow">Data Analysis · WNBA 2006–2025</div>
+  <h1>The Clutch Question</h1>
+  <p class="deck">Do WNBA players actually perform better when the game is on the line — and has that changed over two decades of play?</p>
+  <div class="byline">20 seasons of play-by-play data &nbsp;·&nbsp; Clutch = final 5 min, score within 5 pts</div>
+</header>
+
+<!-- ── SECTION 1: DEFINE ───────────────────────────────────────── -->
+<div class="section">
+  <h2>What is "clutch time"?</h2>
+  <p>
+    The NBA defines clutch time as the final five minutes of regulation or overtime when the score is within five points — a definition adopted here for the WNBA. During this window, every possession counts and the pressure is maximal.
+  </p>
+  <p>
+    To measure whether players <em>rise</em> to that pressure, we compare their shooting percentage during clutch time against their baseline — every shot taken outside of those moments. The difference is their <strong>clutch delta</strong>.
+  </p>
+  <div class="callout">
+    <p>A positive delta means a player shoots <em>better</em> when the game is close and the clock is short. A negative delta means they shoot worse. We call players with a delta above +5 pp "Clutch," below −5 pp "Anti-clutch."</p>
+  </div>
+</div>
+
+<!-- ── CHART 1: League Clutchness Over Time ────────────────────── -->
+<div class="chart-wrap">
+  <div class="chart-title">League-Wide Clutch Delta, 2006–2025</div>
+  <div class="chart-sub">Average player shooting delta (clutch FG% − baseline FG%) per season. Positive = players shoot better in clutch moments.</div>
+  <svg id="chart-league" viewBox="0 0 752 280"></svg>
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-swatch" style="background:#1a1a1a"></div> Avg player delta (pp)
+    </div>
+    <div class="legend-item">
+      <div class="legend-swatch" style="background:#ddd"></div> Median player delta
+    </div>
+  </div>
+</div>
+
+<!-- ── SECTION 2: TREND ANALYSIS ──────────────────────────────── -->
+<div class="section">
+  <h2>A league trending toward average</h2>
+  <p>
+    From 2006 to 2013, the average player outperformed their baseline in clutch situations — the WNBA had a distinctly clutch identity. But since then, the trend has been volatile and largely flat, with several seasons dipping into negative territory.
+  </p>
+  <p>
+    The 2020 bubble season stands out as a dramatic outlier: the average player shot nearly <strong>5 percentage points worse</strong> in clutch time compared to their baseline. The compressed schedule, neutral-site environment, and psychological strain of the bubble likely disrupted late-game execution for everyone.
+  </p>
+  <p>
+    What explains the broader flattening? One possibility: the game itself has changed. As the WNBA has adopted the three-pointer more aggressively, clutch shot selection has shifted in ways that may affect overall accuracy.
+  </p>
+</div>
+
+<!-- ── CHART 2: Shot Mix ───────────────────────────────────────── -->
+<div class="chart-wrap">
+  <div class="chart-title">Shot Mix Over Time — Clutch vs. Baseline</div>
+  <div class="chart-sub">Share of 3PT, 2PT, and free throw attempts. Toggle between clutch and baseline windows.</div>
+  <div class="controls" id="shot-mix-controls">
+    <button class="ctrl-btn active" data-group="Late Tight">Clutch time</button>
+    <button class="ctrl-btn" data-group="Baseline">Baseline</button>
+  </div>
+  <svg id="chart-shotmix" viewBox="0 0 752 260"></svg>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-swatch" style="background:#2980b9"></div> 2PT</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#c0392b"></div> 3PT</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#f39c12"></div> Free Throws</div>
+  </div>
+</div>
+
+<!-- ── SECTION 3: 3PT CORRELATION ─────────────────────────────── -->
+<div class="section">
+  <h2>The three-point effect</h2>
+  <p>
+    Clutch shot selection has tracked the broader WNBA shift toward three-pointers. In 2006, about 17% of clutch attempts were threes. By 2025, that share had grown to over 23%.
+  </p>
+  <p>
+    In clutch situations, teams increasingly reach for the three — perhaps rationally, since a made three can erase a two-possession deficit instantly. But three-pointers are inherently lower-percentage shots. If players are taking more of them under pressure, it would mechanically suppress the clutch delta even if individual players haven't become less clutch.
+  </p>
+</div>
+
+<!-- ── CHART 3: 3PT Correlation ───────────────────────────────── -->
+<div class="chart-wrap">
+  <div class="chart-title">Clutch 3PT Attempt Rate vs. League Delta</div>
+  <div class="chart-sub">Each dot is one season. As 3PT attempt share rises, the average player's clutch delta tends to fall.</div>
+  <svg id="chart-corr" viewBox="0 0 752 300"></svg>
+</div>
+
+<!-- ── SECTION 4: PLAYERS ──────────────────────────────────────── -->
+<div class="section">
+  <h2>Who actually delivers?</h2>
+  <p>
+    While league averages tell one story, individual players reveal another. Using career totals across 2006–2025, we can identify which players consistently outperform (or underperform) their own baseline in clutch situations.
+  </p>
+  <p>
+    The table below includes all players with at least <strong>20 clutch attempts</strong> — enough to have a meaningful signal. Sort by delta to find the most reliably clutch performers, or filter by name.
+  </p>
+</div>
+
+<!-- ── PLAYER TABLE ────────────────────────────────────────────── -->
+<div class="player-table-wrap">
+  <div class="filter-bar">
+    <span>Filter:</span>
+    <input type="text" id="player-search" placeholder="Search player name…">
+    <div class="controls" id="label-filter" style="margin:0">
+      <button class="ctrl-btn active" data-label="all">All</button>
+      <button class="ctrl-btn" data-label="Clutch">Clutch</button>
+      <button class="ctrl-btn" data-label="Steady">Steady</button>
+      <button class="ctrl-btn" data-label="Anti-clutch">Anti-clutch</button>
+    </div>
+  </div>
+  <table id="player-table">
+    <thead>
+      <tr>
+        <th data-col="player_name">Player <span class="sort-arrow"></span></th>
+        <th data-col="attempts_Late_Tight">Clutch Att. <span class="sort-arrow"></span></th>
+        <th data-col="pct_Late_Tight">Clutch FG% <span class="sort-arrow"></span></th>
+        <th data-col="pct_Baseline">Baseline FG% <span class="sort-arrow"></span></th>
+        <th data-col="delta_pp">Delta (pp) <span class="sort-arrow"></span></th>
+        <th data-col="label">Label <span class="sort-arrow"></span></th>
+      </tr>
+    </thead>
+    <tbody id="table-body"></tbody>
+  </table>
+  <div id="table-info" style="font-size:12px;color:#999;margin-top:8px;font-family:'Source Serif 4',serif;"></div>
+</div>
+
+<!-- ── FOOTER ─────────────────────────────────────────────────── -->
+<footer>
+  <strong>Data:</strong> wehoop R package, ESPN WNBA play-by-play, 2006–2025 regular season and playoffs. Clutch defined as final 5 minutes of 4th quarter or OT, score margin ≤ 5 points. Delta = clutch FG% − baseline FG% (in percentage points). Player table filtered to ≥20 clutch attempts.
+</footer>
+
+<script>
+// ─── RAW DATA ────────────────────────────────────────────────────
+const leagueData = [
+  {s:2006,avg:-0.469,med:0.134,att:1967,c3a:326,c3pct:0.319},
+  {s:2007,avg:-0.676,med:0.774,att:2640,c3a:477,c3pct:0.361},
+  {s:2008,avg:0.701,med:3.613,att:2671,c3a:441,c3pct:0.338},
+  {s:2009,avg:0.585,med:1.411,att:2843,c3a:490,c3pct:0.306},
+  {s:2010,avg:2.401,med:2.913,att:2367,c3a:389,c3pct:0.288},
+  {s:2011,avg:2.494,med:3.599,att:2050,c3a:382,c3pct:0.377},
+  {s:2012,avg:0.709,med:-0.602,att:1613,c3a:351,c3pct:0.379},
+  {s:2013,avg:2.508,med:2.955,att:1738,c3a:335,c3pct:0.281},
+  {s:2014,avg:0.800,med:0.495,att:2582,c3a:442,c3pct:0.292},
+  {s:2015,avg:0.147,med:0.444,att:2307,c3a:392,c3pct:0.296},
+  {s:2016,avg:2.035,med:0.649,att:2316,c3a:420,c3pct:0.317},
+  {s:2017,avg:1.128,med:1.471,att:2011,c3a:375,c3pct:0.347},
+  {s:2018,avg:1.314,med:-1.518,att:1587,c3a:325,c3pct:0.354},
+  {s:2019,avg:-1.012,med:-1.372,att:1872,c3a:398,c3pct:0.307},
+  {s:2020,avg:-4.598,med:-2.766,att:1041,c3a:214,c3pct:0.313},
+  {s:2021,avg:-1.229,med:0.888,att:2003,c3a:453,c3pct:0.347},
+  {s:2022,avg:0.219,med:1.305,att:2068,c3a:437,c3pct:0.348},
+  {s:2023,avg:1.333,med:0.451,att:2100,c3a:436,c3pct:0.362},
+  {s:2024,avg:0.506,med:1.512,att:2438,c3a:538,c3pct:0.309},
+  {s:2025,avg:-1.064,med:-1.473,att:2617,c3a:598,c3pct:0.319},
+];
+
+const shotMixData = [
+  {s:2006,g:"Late Tight",t:"2PT",sh:0.487},{s:2006,g:"Late Tight",t:"3PT",sh:0.166},{s:2006,g:"Late Tight",t:"FT",sh:0.347},
+  {s:2006,g:"Baseline",t:"2PT",sh:0.586},{s:2006,g:"Baseline",t:"3PT",sh:0.177},{s:2006,g:"Baseline",t:"FT",sh:0.237},
+  {s:2007,g:"Late Tight",t:"2PT",sh:0.486},{s:2007,g:"Late Tight",t:"3PT",sh:0.181},{s:2007,g:"Late Tight",t:"FT",sh:0.333},
+  {s:2007,g:"Baseline",t:"2PT",sh:0.584},{s:2007,g:"Baseline",t:"3PT",sh:0.190},{s:2007,g:"Baseline",t:"FT",sh:0.226},
+  {s:2008,g:"Late Tight",t:"2PT",sh:0.474},{s:2008,g:"Late Tight",t:"3PT",sh:0.165},{s:2008,g:"Late Tight",t:"FT",sh:0.361},
+  {s:2008,g:"Baseline",t:"2PT",sh:0.579},{s:2008,g:"Baseline",t:"3PT",sh:0.181},{s:2008,g:"Baseline",t:"FT",sh:0.240},
+  {s:2009,g:"Late Tight",t:"2PT",sh:0.496},{s:2009,g:"Late Tight",t:"3PT",sh:0.172},{s:2009,g:"Late Tight",t:"FT",sh:0.332},
+  {s:2009,g:"Baseline",t:"2PT",sh:0.580},{s:2009,g:"Baseline",t:"3PT",sh:0.189},{s:2009,g:"Baseline",t:"FT",sh:0.231},
+  {s:2010,g:"Late Tight",t:"2PT",sh:0.482},{s:2010,g:"Late Tight",t:"3PT",sh:0.164},{s:2010,g:"Late Tight",t:"FT",sh:0.354},
+  {s:2010,g:"Baseline",t:"2PT",sh:0.577},{s:2010,g:"Baseline",t:"3PT",sh:0.194},{s:2010,g:"Baseline",t:"FT",sh:0.229},
+  {s:2011,g:"Late Tight",t:"2PT",sh:0.505},{s:2011,g:"Late Tight",t:"3PT",sh:0.186},{s:2011,g:"Late Tight",t:"FT",sh:0.309},
+  {s:2011,g:"Baseline",t:"2PT",sh:0.595},{s:2011,g:"Baseline",t:"3PT",sh:0.186},{s:2011,g:"Baseline",t:"FT",sh:0.219},
+  {s:2012,g:"Late Tight",t:"2PT",sh:0.469},{s:2012,g:"Late Tight",t:"3PT",sh:0.218},{s:2012,g:"Late Tight",t:"FT",sh:0.314},
+  {s:2012,g:"Baseline",t:"2PT",sh:0.581},{s:2012,g:"Baseline",t:"3PT",sh:0.205},{s:2012,g:"Baseline",t:"FT",sh:0.214},
+  {s:2013,g:"Late Tight",t:"2PT",sh:0.471},{s:2013,g:"Late Tight",t:"3PT",sh:0.193},{s:2013,g:"Late Tight",t:"FT",sh:0.336},
+  {s:2013,g:"Baseline",t:"2PT",sh:0.619},{s:2013,g:"Baseline",t:"3PT",sh:0.165},{s:2013,g:"Baseline",t:"FT",sh:0.216},
+  {s:2014,g:"Late Tight",t:"2PT",sh:0.515},{s:2014,g:"Late Tight",t:"3PT",sh:0.171},{s:2014,g:"Late Tight",t:"FT",sh:0.314},
+  {s:2014,g:"Baseline",t:"2PT",sh:0.623},{s:2014,g:"Baseline",t:"3PT",sh:0.166},{s:2014,g:"Baseline",t:"FT",sh:0.211},
+  {s:2015,g:"Late Tight",t:"2PT",sh:0.512},{s:2015,g:"Late Tight",t:"3PT",sh:0.170},{s:2015,g:"Late Tight",t:"FT",sh:0.318},
+  {s:2015,g:"Baseline",t:"2PT",sh:0.612},{s:2015,g:"Baseline",t:"3PT",sh:0.176},{s:2015,g:"Baseline",t:"FT",sh:0.212},
+  {s:2016,g:"Late Tight",t:"2PT",sh:0.506},{s:2016,g:"Late Tight",t:"3PT",sh:0.181},{s:2016,g:"Late Tight",t:"FT",sh:0.313},
+  {s:2016,g:"Baseline",t:"2PT",sh:0.588},{s:2016,g:"Baseline",t:"3PT",sh:0.178},{s:2016,g:"Baseline",t:"FT",sh:0.234},
+  {s:2017,g:"Late Tight",t:"2PT",sh:0.486},{s:2017,g:"Late Tight",t:"3PT",sh:0.186},{s:2017,g:"Late Tight",t:"FT",sh:0.328},
+  {s:2017,g:"Baseline",t:"2PT",sh:0.583},{s:2017,g:"Baseline",t:"3PT",sh:0.200},{s:2017,g:"Baseline",t:"FT",sh:0.217},
+  {s:2018,g:"Late Tight",t:"2PT",sh:0.495},{s:2018,g:"Late Tight",t:"3PT",sh:0.205},{s:2018,g:"Late Tight",t:"FT",sh:0.301},
+  {s:2018,g:"Baseline",t:"2PT",sh:0.571},{s:2018,g:"Baseline",t:"3PT",sh:0.223},{s:2018,g:"Baseline",t:"FT",sh:0.206},
+  {s:2019,g:"Late Tight",t:"2PT",sh:0.504},{s:2019,g:"Late Tight",t:"3PT",sh:0.213},{s:2019,g:"Late Tight",t:"FT",sh:0.284},
+  {s:2019,g:"Baseline",t:"2PT",sh:0.574},{s:2019,g:"Baseline",t:"3PT",sh:0.232},{s:2019,g:"Baseline",t:"FT",sh:0.194},
+  {s:2020,g:"Late Tight",t:"2PT",sh:0.492},{s:2020,g:"Late Tight",t:"3PT",sh:0.206},{s:2020,g:"Late Tight",t:"FT",sh:0.303},
+  {s:2020,g:"Baseline",t:"2PT",sh:0.551},{s:2020,g:"Baseline",t:"3PT",sh:0.243},{s:2020,g:"Baseline",t:"FT",sh:0.206},
+  {s:2021,g:"Late Tight",t:"2PT",sh:0.496},{s:2021,g:"Late Tight",t:"3PT",sh:0.226},{s:2021,g:"Late Tight",t:"FT",sh:0.278},
+  {s:2021,g:"Baseline",t:"2PT",sh:0.563},{s:2021,g:"Baseline",t:"3PT",sh:0.242},{s:2021,g:"Baseline",t:"FT",sh:0.195},
+  {s:2022,g:"Late Tight",t:"2PT",sh:0.476},{s:2022,g:"Late Tight",t:"3PT",sh:0.211},{s:2022,g:"Late Tight",t:"FT",sh:0.313},
+  {s:2022,g:"Baseline",t:"2PT",sh:0.547},{s:2022,g:"Baseline",t:"3PT",sh:0.251},{s:2022,g:"Baseline",t:"FT",sh:0.203},
+  {s:2023,g:"Late Tight",t:"2PT",sh:0.489},{s:2023,g:"Late Tight",t:"3PT",sh:0.208},{s:2023,g:"Late Tight",t:"FT",sh:0.304},
+  {s:2023,g:"Baseline",t:"2PT",sh:0.546},{s:2023,g:"Baseline",t:"3PT",sh:0.248},{s:2023,g:"Baseline",t:"FT",sh:0.205},
+  {s:2024,g:"Late Tight",t:"2PT",sh:0.461},{s:2024,g:"Late Tight",t:"3PT",sh:0.221},{s:2024,g:"Late Tight",t:"FT",sh:0.318},
+  {s:2024,g:"Baseline",t:"2PT",sh:0.531},{s:2024,g:"Baseline",t:"3PT",sh:0.269},{s:2024,g:"Baseline",t:"FT",sh:0.200},
+  {s:2025,g:"Late Tight",t:"2PT",sh:0.472},{s:2025,g:"Late Tight",t:"3PT",sh:0.229},{s:2025,g:"Late Tight",t:"FT",sh:0.300},
+  {s:2025,g:"Baseline",t:"2PT",sh:0.508},{s:2025,g:"Baseline",t:"3PT",sh:0.285},{s:2025,g:"Baseline",t:"FT",sh:0.207},
+];
+
+const playerData = [
+  {n:"Jia Perkins",att:372,clutch:0.5457,base:0.4725,delta:7.32,label:"Clutch"},
+  {n:"Caitlin Clark",att:74,clutch:0.6622,base:0.4954,delta:16.67,label:"Clutch"},
+  {n:"Chelsea Gray",att:322,clutch:0.5776,base:0.5263,delta:5.13,label:"Clutch"},
+  {n:"Allisha Gray",att:240,clutch:0.6125,base:0.5285,delta:8.40,label:"Clutch"},
+  {n:"Kia Nurse",att:102,clutch:0.5882,base:0.4602,delta:12.81,label:"Clutch"},
+  {n:"Erin Thorn",att:83,clutch:0.6386,base:0.4607,delta:17.78,label:"Clutch"},
+  {n:"Natalie Achonwa",att:46,clutch:0.7609,base:0.5843,delta:17.66,label:"Clutch"},
+  {n:"Tianna Hawkins",att:49,clutch:0.6939,base:0.5257,delta:16.82,label:"Clutch"},
+  {n:"Sophie Cunningham",att:58,clutch:0.6552,base:0.5149,delta:14.03,label:"Clutch"},
+  {n:"Jessica Breland",att:117,clutch:0.6410,base:0.4784,delta:16.26,label:"Clutch"},
+  {n:"Kayla McBride",att:451,clutch:0.5543,base:0.5157,delta:3.86,label:"Steady"},
+  {n:"DeWanna Bonner",att:627,clutch:0.5311,base:0.5284,delta:0.27,label:"Steady"},
+  {n:"Breanna Stewart",att:454,clutch:0.5683,base:0.5655,delta:0.27,label:"Steady"},
+  {n:"A'ja Wilson",att:338,clutch:0.6006,base:0.5922,delta:0.84,label:"Steady"},
+  {n:"Sabrina Ionescu",att:280,clutch:0.5429,base:0.4954,delta:4.75,label:"Steady"},
+  {n:"Skylar Diggins",att:537,clutch:0.5382,base:0.5310,delta:0.72,label:"Steady"},
+  {n:"Diana Taurasi",att:878,clutch:0.5342,base:0.5502,delta:-1.60,label:"Steady"},
+  {n:"Candace Parker",att:540,clutch:0.5500,base:0.5503,delta:-0.03,label:"Steady"},
+  {n:"Tamika Catchings",att:502,clutch:0.5757,base:0.5436,delta:3.21,label:"Steady"},
+  {n:"Cappie Pondexter",att:640,clutch:0.5469,base:0.5153,delta:3.15,label:"Steady"},
+  {n:"Seimone Augustus",att:448,clutch:0.5246,base:0.5363,delta:-1.17,label:"Steady"},
+  {n:"Lindsay Whalen",att:442,clutch:0.5679,base:0.5543,delta:1.35,label:"Steady"},
+  {n:"Napheesa Collier",att:238,clutch:0.6218,base:0.5726,delta:4.93,label:"Steady"},
+  {n:"Jewell Loyd",att:515,clutch:0.5107,base:0.5115,delta:-0.08,label:"Steady"},
+  {n:"Sue Bird",att:422,clutch:0.4550,base:0.4813,delta:-2.64,label:"Steady"},
+  {n:"Maya Moore",att:368,clutch:0.5353,base:0.5407,delta:-0.53,label:"Steady"},
+  {n:"Arike Ogunbowale",att:403,clutch:0.5037,base:0.4857,delta:1.80,label:"Steady"},
+  {n:"Kelsey Plum",att:239,clutch:0.5314,base:0.5300,delta:0.14,label:"Steady"},
+  {n:"Nneka Ogwumike",att:465,clutch:0.5871,base:0.6075,delta:-2.04,label:"Steady"},
+  {n:"Angel McCoughtry",att:618,clutch:0.5291,base:0.5339,delta:-0.48,label:"Steady"},
+  {n:"Tina Charles",att:516,clutch:0.4981,base:0.5159,delta:-1.78,label:"Steady"},
+  {n:"Candice Dupree",att:437,clutch:0.5263,base:0.5644,delta:-3.81,label:"Steady"},
+  {n:"Brittney Griner",att:324,clutch:0.6049,base:0.6218,delta:-1.69,label:"Steady"},
+  {n:"Sylvia Fowles",att:350,clutch:0.6486,base:0.6373,delta:1.13,label:"Steady"},
+  {n:"Elena Delle Donne",att:310,clutch:0.6032,base:0.5900,delta:1.32,label:"Steady"},
+  {n:"Kahleah Copper",att:245,clutch:0.5061,base:0.5272,delta:-2.11,label:"Steady"},
+  {n:"Paige Bueckers",att:54,clutch:0.5000,base:0.5710,delta:-7.10,label:"Anti-clutch"},
+  {n:"Liz Cambage",att:147,clutch:0.5306,base:0.6132,delta:-8.26,label:"Anti-clutch"},
+  {n:"Gabby Williams",att:83,clutch:0.3976,base:0.4889,delta:-9.13,label:"Anti-clutch"},
+  {n:"Jantel Lavender",att:98,clutch:0.4490,base:0.5429,delta:-9.39,label:"Anti-clutch"},
+  {n:"Shoni Schimmel",att:49,clutch:0.3265,base:0.4336,delta:-10.71,label:"Anti-clutch"},
+  {n:"Lisa Leslie",att:111,clutch:0.4324,base:0.5425,delta:-11.01,label:"Anti-clutch"},
+  {n:"Katie Lou Samuelson",att:32,clutch:0.4063,base:0.4593,delta:-5.30,label:"Anti-clutch"},
+  {n:"Tierra Ruffin-Pratt",att:109,clutch:0.4037,base:0.4740,delta:-7.03,label:"Anti-clutch"},
+  {n:"Ezi Magbegor",att:60,clutch:0.5000,base:0.5653,delta:-6.53,label:"Anti-clutch"},
+  {n:"Alyssa Thomas",att:384,clutch:0.5156,base:0.5409,delta:-2.52,label:"Steady"},
+  {n:"Jordin Canada",att:183,clutch:0.5355,base:0.4986,delta:3.69,label:"Steady"},
+  {n:"Rickea Jackson",att:51,clutch:0.6275,base:0.5060,delta:12.14,label:"Clutch"},
+  {n:"Angel Reese",att:65,clutch:0.5846,base:0.5203,delta:6.43,label:"Clutch"},
+  {n:"Aaliyah Edwards",att:23,clutch:0.6957,base:0.5197,delta:17.60,label:"Clutch"},
+  {n:"Jackie Young",att:191,clutch:0.5969,base:0.5462,delta:5.07,label:"Clutch"},
+  {n:"Leonie Fiebich",att:14,clutch:0.7857,base:0.5391,delta:24.66,label:"Clutch"},
+  {n:"Jacy Sheldon",att:13,clutch:0.7692,base:0.4707,delta:29.85,label:"Clutch"},
+  {n:"Haley Jones",att:17,clutch:0.8235,base:0.4515,delta:37.21,label:"Clutch"},
+  {n:"Jonquel Jones",att:216,clutch:0.5833,base:0.5815,delta:0.18,label:"Steady"},
+  {n:"Natasha Cloud",att:235,clutch:0.5277,base:0.4788,delta:4.89,label:"Steady"},
+  {n:"Aliyah Boston",att:148,clutch:0.6351,base:0.5808,delta:5.44,label:"Clutch"},
+  {n:"Dearica Hamby",att:230,clutch:0.5609,base:0.5395,delta:2.14,label:"Steady"},
+  {n:"Satou Sabally",att:146,clutch:0.5479,base:0.5230,delta:2.50,label:"Steady"},
+  {n:"Betnijah Laney-Hamilton",att:146,clutch:0.5479,base:0.5020,delta:4.59,label:"Steady"},
+  {n:"Courtney Vandersloot",att:369,clutch:0.5203,base:0.5139,delta:0.65,label:"Steady"},
+  {n:"Marina Mabrey",att:173,clutch:0.4624,base:0.4548,delta:0.77,label:"Steady"},
+  {n:"DiJonai Carrington",att:72,clutch:0.5278,base:0.4936,delta:3.42,label:"Steady"},
+];
+
+const tooltip = document.getElementById('tooltip');
+function showTip(e, html) {
+  tooltip.innerHTML = html;
+  tooltip.style.opacity = 1;
+  moveTip(e);
+}
+function moveTip(e) {
+  tooltip.style.left = (e.clientX + 14) + 'px';
+  tooltip.style.top  = (e.clientY - 10) + 'px';
+}
+function hideTip() { tooltip.style.opacity = 0; }
+
+// ─── CHART 1: League Delta ────────────────────────────────────────
+(function() {
+  const vw = 752, vh = 280;
+  const m = {t:20, r:20, b:38, l:48};
+  const W = vw - m.l - m.r, H = vh - m.t - m.b;
+
+  const svg = d3.select('#chart-league');
+  const g = svg.append('g').attr('transform', `translate(${m.l},${m.t})`);
+
+  const x = d3.scaleLinear().domain([2006, 2025]).range([0, W]);
+  const yExt = d3.extent(leagueData, d => Math.min(d.avg, d.med));
+  const yMax = d3.max(leagueData, d => Math.max(d.avg, d.med));
+  const y = d3.scaleLinear().domain([Math.min(yExt[0], -5.5), Math.max(yMax, 3.5)]).range([H, 0]).nice();
+
+  // Grid
+  y.ticks(6).forEach(t => {
+    g.append('line').attr('class','ref-line')
+     .attr('x1',0).attr('x2',W).attr('y1',y(t)).attr('y2',y(t));
+  });
+
+  // Zero line
+  g.append('line').attr('class','zero-line')
+   .attr('x1',0).attr('x2',W).attr('y1',y(0)).attr('y2',y(0));
+
+  // Zero label
+  g.append('text').attr('x',-6).attr('y',y(0)+4)
+   .attr('text-anchor','end').attr('font-size',10).attr('fill','#999').attr('font-family','Source Serif 4, serif').text('0');
+
+  // Shade positive area
+  const area = d3.area()
+    .x(d => x(d.s))
+    .y0(d => y(Math.min(d.avg, 0)))
+    .y1(d => y(Math.max(d.avg, 0)));
+  g.append('path').datum(leagueData).attr('fill','#eafaf1').attr('d', area);
+
+  // Median line (faint)
+  const medLine = d3.line().x(d => x(d.s)).y(d => y(d.med)).curve(d3.curveMonotoneX);
+  g.append('path').datum(leagueData).attr('fill','none').attr('stroke','#ddd').attr('stroke-width',1.5).attr('d', medLine);
+
+  // Avg line
+  const avgLine = d3.line().x(d => x(d.s)).y(d => y(d.avg)).curve(d3.curveMonotoneX);
+  g.append('path').datum(leagueData).attr('fill','none').attr('stroke','#1a1a1a').attr('stroke-width',2).attr('d', avgLine);
+
+  // Dots
+  g.selectAll('.dot').data(leagueData).enter().append('circle')
+   .attr('cx', d => x(d.s)).attr('cy', d => y(d.avg))
+   .attr('r', 4).attr('fill', d => d.avg < 0 ? '#c0392b' : '#1a1a1a')
+   .attr('stroke','#fff').attr('stroke-width',1.5)
+   .style('cursor','pointer')
+   .on('mousemove', (e,d) => showTip(e, `<strong>${d.s}</strong><br>Avg delta: ${d.avg.toFixed(2)} pp<br>Clutch attempts: ${d.att.toLocaleString()}`))
+   .on('mouseleave', hideTip)
+   .on('mouseover', function(e,d){ d3.select(this).attr('r',6); })
+   .on('mouseout', function(e,d){ d3.select(this).attr('r',4); });
+
+  // Bubble annotation
+  g.append('text').attr('x', x(2020) + 4).attr('y', y(-4.598) - 10)
+   .attr('font-size', 10).attr('fill','#c0392b').attr('font-family','Source Serif 4, serif')
+   .text('2020 Bubble');
+
+  // Axes
+  g.append('g').attr('class','axis').attr('transform',`translate(0,${H})`).call(
+    d3.axisBottom(x).tickFormat(d3.format('d')).tickValues(d3.range(2006,2026,2))
+  );
+  g.append('g').attr('class','axis').call(d3.axisLeft(y).ticks(6).tickFormat(d => d + ' pp'));
+})();
+
+// ─── CHART 2: Shot Mix ────────────────────────────────────────────
+(function() {
+  const vw = 752, vh = 260;
+  const m = {t:20, r:20, b:38, l:48};
+  const W = vw - m.l - m.r, H = vh - m.t - m.b;
+  let activeGroup = 'Late Tight';
+
+  const svg = d3.select('#chart-shotmix');
+  const g = svg.append('g').attr('transform', `translate(${m.l},${m.t})`);
+
+  const x = d3.scaleLinear().domain([2006, 2025]).range([0, W]);
+  const y = d3.scaleLinear().domain([0, 1]).range([H, 0]);
+  const colors = {'2PT':'#2980b9','3PT':'#c0392b','FT':'#f39c12'};
+
+  function getGrouped(grp) {
+    const bySeason = {};
+    shotMixData.filter(d => d.g === grp).forEach(d => {
+      if (!bySeason[d.s]) bySeason[d.s] = {};
+      bySeason[d.s][d.t] = d.sh;
+    });
+    return Object.entries(bySeason).map(([s, v]) => ({s:+s, ...v})).sort((a,b) => a.s-b.s);
+  }
+
+  const stackKeys = ['FT','3PT','2PT'];
+  const stack = d3.stack().keys(stackKeys).order(d3.stackOrderNone).offset(d3.stackOffsetNone);
+
+  function draw(grp) {
+    g.selectAll('.stack-group').remove();
+    g.selectAll('.stack-line').remove();
+    g.selectAll('.ref-line2').remove();
+
+    const data = getGrouped(grp);
+    const stacked = stack(data.map(d => ({s:d.s, '2PT':d['2PT']||0, '3PT':d['3PT']||0, 'FT':d['FT']||0})));
+
+    const area = d3.area()
+      .x(d => x(d.data.s))
+      .y0(d => y(d[0]))
+      .y1(d => y(d[1]))
+      .curve(d3.curveMonotoneX);
+
+    stacked.forEach(layer => {
+      g.append('path').datum(layer)
+       .attr('class','stack-group')
+       .attr('fill', colors[layer.key])
+       .attr('opacity', 0.75)
+       .attr('d', area)
+       .on('mousemove', function(e, d) {
+         const season = Math.round(x.invert(e.offsetX - m.l));
+         const row = data.find(r => r.s === season);
+         if (!row) return;
+         showTip(e, `<strong>${season}</strong><br>2PT: ${(row['2PT']*100).toFixed(1)}%<br>3PT: ${(row['3PT']*100).toFixed(1)}%<br>FT: ${(row['FT']*100).toFixed(1)}%`);
+       })
+       .on('mouseleave', hideTip);
+    });
+  }
+
+  // Grid
+  [0.25, 0.5, 0.75].forEach(t => {
+    g.append('line').attr('class','ref-line').attr('x1',0).attr('x2',W).attr('y1',y(t)).attr('y2',y(t));
+  });
+
+  draw(activeGroup);
+
+  // Axes
+  g.append('g').attr('class','axis').attr('transform',`translate(0,${H})`).call(
+    d3.axisBottom(x).tickFormat(d3.format('d')).tickValues(d3.range(2006,2026,2))
+  );
+  g.append('g').attr('class','axis').call(d3.axisLeft(y).ticks(4).tickFormat(d3.format('.0%')));
+
+  // Controls
+  document.querySelectorAll('#shot-mix-controls .ctrl-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('#shot-mix-controls .ctrl-btn').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      activeGroup = this.dataset.group;
+      draw(activeGroup);
+    });
+  });
+})();
+
+// ─── CHART 3: Correlation ─────────────────────────────────────────
+(function() {
+  const vw = 752, vh = 300;
+  const m = {t:20, r:40, b:48, l:56};
+  const W = vw - m.l - m.r, H = vh - m.t - m.b;
+
+  const svg = d3.select('#chart-corr');
+  const g = svg.append('g').attr('transform', `translate(${m.l},${m.t})`);
+
+  const x = d3.scaleLinear().domain([0.15, 0.30]).range([0, W]);
+  const y = d3.scaleLinear().domain([-6, 4]).range([H, 0]).nice();
+
+  // Grid
+  y.ticks(5).forEach(t => {
+    g.append('line').attr('class','ref-line').attr('x1',0).attr('x2',W).attr('y1',y(t)).attr('y2',y(t));
+  });
+  g.append('line').attr('class','zero-line').attr('x1',0).attr('x2',W).attr('y1',y(0)).attr('y2',y(0));
+
+  // Trend line
+  const n = leagueData.length;
+  const xm = d3.mean(leagueData, d => d.c3a / d.att);
+  const ym = d3.mean(leagueData, d => d.avg);
+  let num = 0, den = 0;
+  leagueData.forEach(d => {
+    const xi = d.c3a / d.att;
+    num += (xi - xm) * (d.avg - ym);
+    den += (xi - xm) ** 2;
+  });
+  const slope = num / den;
+  const intercept = ym - slope * xm;
+  const xDom = [0.15, 0.30];
+  g.append('line')
+   .attr('x1', x(xDom[0])).attr('x2', x(xDom[1]))
+   .attr('y1', y(slope * xDom[0] + intercept)).attr('y2', y(slope * xDom[1] + intercept))
+   .attr('stroke', '#c0392b').attr('stroke-width', 1.5).attr('stroke-dasharray', '4,4').attr('opacity', 0.7);
+
+  // Dots
+  g.selectAll('.cdot').data(leagueData).enter().append('circle')
+   .attr('cx', d => x(d.c3a / d.att))
+   .attr('cy', d => y(d.avg))
+   .attr('r', 6)
+   .attr('fill', d => d.avg < 0 ? '#c0392b' : '#2980b9')
+   .attr('stroke','#fff').attr('stroke-width', 1.5)
+   .style('cursor','pointer')
+   .on('mousemove', (e,d) => showTip(e, `<strong>${d.s}</strong><br>3PT share: ${(d.c3a/d.att*100).toFixed(1)}%<br>Avg delta: ${d.avg.toFixed(2)} pp`))
+   .on('mouseleave', hideTip)
+   .on('mouseover', function(){ d3.select(this).attr('r',8); })
+   .on('mouseout',  function(){ d3.select(this).attr('r',6); });
+
+  // Labels for select points
+  [[2020,-4.598,2020],[2013,2.508,2013],[2025,-1.064,2025]].forEach(([s,avg,label]) => {
+    const d = leagueData.find(r => r.s === s);
+    if (!d) return;
+    g.append('text')
+     .attr('x', x(d.c3a/d.att) + 8).attr('y', y(d.avg) + 4)
+     .attr('font-size', 10).attr('fill','#555').attr('font-family','Source Serif 4,serif')
+     .text(label);
+  });
+
+  // Axes
+  g.append('g').attr('class','axis').attr('transform',`translate(0,${H})`).call(
+    d3.axisBottom(x).tickFormat(d3.format('.0%')).ticks(5)
+  );
+  g.append('g').attr('class','axis').call(d3.axisLeft(y).ticks(5).tickFormat(d => d + ' pp'));
+
+  g.append('text').attr('x', W/2).attr('y', H+38).attr('text-anchor','middle')
+   .attr('font-size',11).attr('fill','#999').attr('font-family','Source Serif 4,serif')
+   .text('Clutch 3PT attempt share');
+  g.append('text').attr('transform','rotate(-90)').attr('x',-H/2).attr('y',-42)
+   .attr('text-anchor','middle').attr('font-size',11).attr('fill','#999').attr('font-family','Source Serif 4,serif')
+   .text('Avg player delta (pp)');
+})();
+
+// ─── PLAYER TABLE ─────────────────────────────────────────────────
+(function() {
+  const MIN_ATT = 20;
+  let data = playerData.filter(d => d.att >= MIN_ATT);
+  let sortCol = 'delta', sortDir = -1;
+  let labelFilter = 'all';
+  let search = '';
+
+  const cols = ['n','att','clutch','base','delta','label'];
+  const colMap = {n:'player_name',att:'attempts_Late_Tight',clutch:'pct_Late_Tight',base:'pct_Baseline',delta:'delta_pp',label:'label'};
+
+  function getFiltered() {
+    return data.filter(d => {
+      const matchLabel = labelFilter === 'all' || d.label === labelFilter;
+      const matchSearch = d.n.toLowerCase().includes(search.toLowerCase());
+      return matchLabel && matchSearch;
+    }).sort((a,b) => {
+      let va = a[sortCol], vb = b[sortCol];
+      if (typeof va === 'string') return sortDir * va.localeCompare(vb);
+      return sortDir * (va - vb);
+    });
+  }
+
+  function render() {
+    const rows = getFiltered();
+    const tbody = document.getElementById('table-body');
+    tbody.innerHTML = rows.map(d => `
+      <tr>
+        <td>${d.n}</td>
+        <td>${d.att}</td>
+        <td>${(d.clutch*100).toFixed(1)}%</td>
+        <td>${(d.base*100).toFixed(1)}%</td>
+        <td style="font-weight:500;color:${d.delta>5?'#27ae60':d.delta<-5?'#c0392b':'#555'}">${d.delta>0?'+':''}${d.delta.toFixed(1)}</td>
+        <td><span class="label-badge label-${d.label.replace(/ /g,'-')}">${d.label}</span></td>
+      </tr>`).join('');
+    document.getElementById('table-info').textContent = `Showing ${rows.length} of ${data.length} players (≥${MIN_ATT} clutch attempts)`;
+
+    // Sort arrows
+    document.querySelectorAll('thead th[data-col]').forEach(th => {
+      const c = Object.keys(colMap).find(k => colMap[k] === th.dataset.col) || th.dataset.col;
+      const arrow = th.querySelector('.sort-arrow');
+      if (c === sortCol || th.dataset.col === sortCol) {
+        arrow.textContent = sortDir === 1 ? ' ↑' : ' ↓';
+      } else {
+        arrow.textContent = '';
+      }
+    });
+  }
+
+  document.querySelectorAll('thead th[data-col]').forEach(th => {
+    th.addEventListener('click', function() {
+      const col = this.dataset.col;
+      const internalCol = Object.keys(colMap).find(k => colMap[k] === col) || col;
+      if (internalCol === sortCol) sortDir *= -1;
+      else { sortCol = internalCol; sortDir = internalCol === 'n' ? 1 : -1; }
+      render();
+    });
+  });
+
+  // Map header data-col to internal keys
+  document.querySelector('[data-col="player_name"]').dataset.col = 'n';
+  document.querySelector('[data-col="attempts_Late_Tight"]').dataset.col = 'att';
+  document.querySelector('[data-col="pct_Late_Tight"]').dataset.col = 'clutch';
+  document.querySelector('[data-col="pct_Baseline"]').dataset.col = 'base';
+  document.querySelector('[data-col="delta_pp"]').dataset.col = 'delta';
+  document.querySelector('[data-col="label"]').dataset.col = 'label';
+
+  document.getElementById('player-search').addEventListener('input', function() {
+    search = this.value;
+    render();
+  });
+
+  document.querySelectorAll('#label-filter .ctrl-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('#label-filter .ctrl-btn').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      labelFilter = this.dataset.label;
+      render();
+    });
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
