@@ -281,20 +281,25 @@ server <- function(input, output, session) {
           total_late_tight_attempts
         )
       )
+    year_breaks <- seq(min(df$season, na.rm = TRUE), max(df$season, na.rm = TRUE), by = 2)
 
     p <- ggplot(df, aes(x = season, y = avg_player_delta_pp, group = 1, text = hover)) +
       geom_hline(yintercept = 0, linetype = "dashed", color = "gray55") +
       geom_col(aes(fill = avg_player_delta_pp >= 0), width = 0.72, alpha = 0.82) +
       geom_line(linewidth = 0.9, color = "gray25") +
       geom_point(size = 2.2, color = "gray15") +
-      scale_x_continuous(breaks = sort(unique(df$season))) +
+      scale_x_continuous(breaks = year_breaks) +
       scale_fill_manual(values = c("TRUE" = "#2b8cbe", "FALSE" = "#d95f0e"), guide = "none") +
       labs(
         x = NULL,
         y = "Average player clutch delta (pp)"
       ) +
       theme_minimal(base_size = 13) +
-      theme(panel.grid.minor = element_blank())
+      theme(
+        axis.text.x = element_text(size = 10),
+        panel.grid.minor = element_blank(),
+        plot.margin = margin(5.5, 5.5, 14, 5.5)
+      )
 
     ggplotly(p, tooltip = "text") %>%
       layout(hovermode = "closest")
@@ -315,15 +320,20 @@ server <- function(input, output, session) {
           points_per_attempt
         )
       )
+    year_breaks <- seq(min(df$season, na.rm = TRUE), max(df$season, na.rm = TRUE), by = 2)
 
     p <- ggplot(df, aes(x = season, y = attempts, group = 1, text = hover)) +
       geom_col(width = 0.72, fill = "#4d4d4d", alpha = 0.82) +
       geom_line(linewidth = 0.9, color = "gray20") +
       geom_point(size = 2.2, color = "gray10") +
-      scale_x_continuous(breaks = sort(unique(df$season))) +
+      scale_x_continuous(breaks = year_breaks) +
       labs(x = NULL, y = "Late Tight shot attempts") +
       theme_minimal(base_size = 13) +
-      theme(panel.grid.minor = element_blank())
+      theme(
+        axis.text.x = element_text(size = 10),
+        panel.grid.minor = element_blank(),
+        plot.margin = margin(5.5, 5.5, 14, 5.5)
+      )
 
     ggplotly(p, tooltip = "text") %>%
       layout(hovermode = "closest")
@@ -364,14 +374,20 @@ server <- function(input, output, session) {
       )) %>%
       left_join(source_df %>% select(season, attempts_hover, makes_hover), by = "season") %>%
       mutate(hover = if_else(metric == "3PT attempts", attempts_hover, makes_hover))
+    year_breaks <- seq(min(df$season, na.rm = TRUE), max(df$season, na.rm = TRUE), by = 2)
 
     p <- ggplot(df, aes(x = season, y = count, color = metric, group = metric, text = hover)) +
       geom_line(linewidth = 1) +
       geom_point(size = 2.2) +
-      scale_x_continuous(breaks = sort(unique(df$season))) +
+      scale_x_continuous(breaks = year_breaks) +
       labs(x = NULL, y = "Late Tight 3PT shots", color = NULL) +
       theme_minimal(base_size = 13) +
-      theme(legend.position = "top", panel.grid.minor = element_blank())
+      theme(
+        axis.text.x = element_text(size = 10),
+        legend.position = "top",
+        panel.grid.minor = element_blank(),
+        plot.margin = margin(5.5, 5.5, 14, 5.5)
+      )
 
     ggplotly(p, tooltip = "text") %>%
       layout(hovermode = "closest", legend = list(orientation = "h"))
@@ -493,12 +509,19 @@ server <- function(input, output, session) {
         )
       )
 
-    p <- ggplot(df, aes(x = factor(season), y = share, fill = shot_type, text = hover)) +
+    year_breaks <- seq(min(df$season, na.rm = TRUE), max(df$season, na.rm = TRUE), by = 2)
+
+    p <- ggplot(df, aes(x = season, y = share, fill = shot_type, text = hover)) +
       geom_col(width = 0.72) +
+      scale_x_continuous(breaks = year_breaks) +
       scale_y_continuous(labels = function(x) paste0(round(100 * x), "%")) +
       labs(x = NULL, y = "Share of Late Tight attempts", fill = "Shot type") +
       theme_minimal(base_size = 13) +
-      theme(legend.position = "top")
+      theme(
+        legend.position = "top",
+        axis.text.x = element_text(size = 10),
+        plot.margin = margin(5.5, 5.5, 14, 5.5)
+      )
 
     ggplotly(p, tooltip = "text") %>%
       layout(hovermode = "closest", legend = list(orientation = "h"))
